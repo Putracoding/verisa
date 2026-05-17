@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      // For simplicity in this demo, we'll check if email is the creator's email
+      // In production, use a dedicated admin collection or custom claims
+      return isSignedIn() && request.auth.token.email == 'mandalafirmansyah5@gmail.com';
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Internal for status check
+    match /_internal_/{docId} {
+      allow read: if true;
+    }
+
+    // Products
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if true; // Allow anyone to seed the database for this demo
+      allow update, delete: if isAdmin();
+      
+      function isValidProduct(data) {
+        return data.name is string && data.name.size() > 0 &&
+               data.price is number && data.price >= 0 &&
+               data.categoryId is string &&
+               data.mainImage is string;
+      }
+    }
+
+    // Categories
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Users
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId);
+    }
+
+    // Orders
+    match /orders/{orderId} {
+      allow create: if isEmailVerified();
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isAdmin(); // Only admin can update status
+    }
+
+    // Reviews
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Verisa Shop",
+  "description": "A modern e-commerce platform similar to Shopee, featuring product listings, categories, shopping cart, and search.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
